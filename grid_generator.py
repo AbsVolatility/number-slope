@@ -4,6 +4,9 @@ from itertools import groupby
 import sys
 import time
 
+if sys.version_info[0] == 3:
+    xrange = range
+
 class ContradictionError(Exception):
     pass
 
@@ -194,7 +197,7 @@ def generate_grid(n):
             break
     rows = [tuple(Node(row_num, col_num, tile_num-1) for col_num, tile_num in enumerate(row))
             for row_num, row in enumerate(grid)]
-    cols = zip(*rows)
+    cols = list(zip(*rows))
     tiles = [[] for _ in xrange(n)]
     for node in sum(rows, ()):
         tiles[node.tile].append(node)
@@ -216,14 +219,15 @@ while True:
     if grid:
         break
     if tries % 1000 == 0:
-        print tries, "tries"
+        print("{} tries".format(tries))
 time_taken = time.time() - start_time
-print "\n".join(["".join([str(node.tile) for node in row]) for row in grid])
-print
-print "\n".join(["".join([str(node.value) for node in row]) for row in grid])
-print
-print tries, "tries"
-print "Completed in", int(time_taken), "seconds"
+print()
+print("\n".join(["".join([str(node.tile) for node in row]) for row in grid]))
+print()
+print("\n".join(["".join([str(node.value) for node in row]) for row in grid]))
+print()
+print("{} tries".format(tries))
+print("Completed in {} seconds".format(int(time_taken)))
 
 
 """
@@ -237,8 +241,8 @@ for _ in xrange(100):
         if grid:
             break
 time_taken = time.time() - start_time
-print round(tries/100.0, 2), "tries on average"
-print "Completed in", time_taken/100, "seconds on average"
+print("{} tries on average".format(round(tries/100.0, 2)))
+print("Completed in {} seconds on average".format(time_taken/100))
 """
 
 """
@@ -247,10 +251,10 @@ start_time = time.time()
 for _ in xrange(50):
     grid = generate_grid(n)
     if grid:
-        print "\n".join(["".join([str(node.tile) for node in row]) for row in grid])
-        print
-        print "\n".join(["".join([str(node.value) for node in row]) for row in grid])
-        print
+        print("\n".join(["".join([str(node.tile) for node in row]) for row in grid]))
+        print()
+        print("\n".join(["".join([str(node.value) for node in row]) for row in grid]))
+        print()
 time_taken = time.time() - start_time
-print "Completed in", time_taken/50, "seconds on average"
+print("Completed in {} seconds on average".format(time_taken/50))
 """
