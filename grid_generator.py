@@ -6,6 +6,7 @@ import time
 
 if sys.version_info[0] == 3:
     xrange = range
+    raw_input = input
 
 class ContradictionError(Exception):
     pass
@@ -160,7 +161,8 @@ def fill_grid(rows, cols, tiles, runs, n):
                     for tile in tiles:
                         possible = [node for node in tile if node.possible]
                         if possible:
-                            node = possible.pop(0)
+                            random.shuffle(possible)
+                            node = possible.pop()
                             moves.append(possible)
                             node.value = i
                             num_filled += 1
@@ -180,7 +182,7 @@ def fill_grid(rows, cols, tiles, runs, n):
                 except IndexError:  # moves list is empty, no possible filling
                     return False
                 except AttributeError:  # pop a list
-                    guess = node.pop(0)
+                    guess = node.pop()
                     if node:
                         moves.append(node)
                     guess.value = i
@@ -209,8 +211,48 @@ def generate_grid(n):
                 runs[tile_num].append(run)
     return fill_grid(rows, cols, tiles, runs, n)
 
+def display_grid(grid):
+    """Display a completed grid."""
+    n = len(grid)
+    tiling = [[None]*(n+2)] + [[None] + [node.tile for node in row] + [None] for row in grid] + [[None]*(n+2)]
+    pipes = [[False]*(n+1) for _ in xrange(n)]  # position of '|' characters
+    for row_num, row in enumerate(tiling[1:-1]):
+        i = 0
+        while i <= n:
+            if row[i] != row[i+1]:
+                pipes[row_num][i] = True
+            i += 1
+    pipes_cols = list(zip(*pipes))
+    tiling = list(zip(*tiling))
+    dashes = [[False]*(n+1) for _ in xrange(n)]  # position of "---" characters
+    for row_num, row in enumerate(tiling[1:-1]):
+        i = 0
+        while i <= n:
+            if row[i] != row[i+1]:
+                dashes[row_num][i] = True
+            i += 1
+    dashes = list(zip(*dashes))
+    crosses = [[' ']*(n+1) for _ in xrange(n+1)]  # position of "+" characters
+    for i in xrange(n+1):
+        for j in xrange(n+1):
+            adj_dashes = dashes[i][(j-1 if j else 0):j+1]
+            adj_pipes = pipes_cols[j][(i-1 if i else 0):i+1]
+            if True in adj_dashes and True in adj_pipes:
+                crosses[i][j] = '+'
+            elif True in adj_dashes:
+                crosses[i][j] = '-'
+            elif True in adj_pipes:
+                crosses[i][j] = '|'
+    print("")
+    for row_num in xrange(n+1):
+        print("{}".join(crosses[row_num]).format(*((' -'[dash])*3 for dash in dashes[row_num])))
+        if row_num < n:
+            print("{: ^3}".join([' |'[pipe] for pipe in pipes[row_num]]).format(*(node.value for node in grid[row_num])))
 
-n = int(sys.argv[1])
+try:
+    n = int(sys.argv[1])
+except IndexError:
+    n = int(raw_input("Enter a value for n: "))
 tries = 0
 start_time = time.time()
 while True:
@@ -221,40 +263,7 @@ while True:
     if tries % 1000 == 0:
         print("{} tries".format(tries))
 time_taken = time.time() - start_time
-print()
-print("\n".join(["".join([str(node.tile) for node in row]) for row in grid]))
-print()
-print("\n".join(["".join([str(node.value) for node in row]) for row in grid]))
-print()
+display_grid(grid)
+print("")
 print("{} tries".format(tries))
 print("Completed in {} seconds".format(int(time_taken)))
-
-
-"""
-n = 9
-tries = 0
-start_time = time.time()
-for _ in xrange(100):
-    while True:
-        tries += 1
-        grid = tile_grid(n)
-        if grid:
-            break
-time_taken = time.time() - start_time
-print("{} tries on average".format(round(tries/100.0, 2)))
-print("Completed in {} seconds on average".format(time_taken/100))
-"""
-
-"""
-n = 9
-start_time = time.time()
-for _ in xrange(50):
-    grid = generate_grid(n)
-    if grid:
-        print("\n".join(["".join([str(node.tile) for node in row]) for row in grid]))
-        print()
-        print("\n".join(["".join([str(node.value) for node in row]) for row in grid]))
-        print()
-time_taken = time.time() - start_time
-print("Completed in {} seconds on average".format(time_taken/50))
-"""
