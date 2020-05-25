@@ -7,7 +7,7 @@ The program can takes an argument *n*, which gives the size of the grid. E.g. on
 
 in the command window to get a 6x6 grid. If you don't provide an argument when you run the program, it will prompt you for a value for *n*.
 
-The program will output a random, completed *n*-by-*n* grid as soon as it finds one. It will also give an update every 1000 tries, until it finds a solution or you force-quit the program.
+The program will output a random, completed *n*-by-*n* grid as soon as it finds one. It will also give an update every 5000 tries, until it finds a solution or you force-quit the program.
 
 Example output for *n* = 6:
 
@@ -29,6 +29,11 @@ Example output for *n* = 6:
     Completed in 0 seconds
 
 **Warning**: Don't expect to get a result any time soon for *n* larger than 8.
+
+Command line options:
+ - `-tile` generates a tiling of an *n*-by-*n* square with *n* *n*-ominos.
+ - `-g N` attempts to generate *N* grids of size *n*-by-*n*, and times the process (default *N* = 1).
+ - `-t N` attempts to generate *N* tilings of size *n*-by-*n*, and times the process (default *N* = 100).
 
 ---
 

@@ -8,8 +8,10 @@ if sys.version_info[0] == 3:
     xrange = range
     raw_input = input
 
+
 class ContradictionError(Exception):
     pass
+
 
 class Node:
     def __init__(self, row, col, tile):
@@ -20,18 +22,35 @@ class Node:
         self.possible = True
 
 
+def is_pinch_point(grid, row, col, n):
+    filled = (row == 0 or bool(grid[row-1][col]))
+    num_switches = 0
+    for i,j in [(-1,1),(0,1),(1,1),(1,0),(1,-1),(0,-1),(-1,-1),(-1,0)]:
+        next_cell = ((row+i == -1) or (row+i == n) or (col+j == -1) or (col+j == n) or bool(grid[row+i][col+j]))
+        if next_cell != filled:
+            num_switches += 1
+        filled = next_cell
+    return num_switches > 2
+
+
 def tile_grid(n):
     """Try to generate a random tiling of an n-by-n square using n n-ominoes.
     Return False if the generation fails."""
+    tries = 1
     grid = [[0]*n for _ in xrange(n)]
-    for i in xrange(1, n+1):
+    for i in xrange(1, n):
         for row_num, row in enumerate(grid):
-            if 0 in row:
-                col = row.index(0)
+            possible_starts = [row[col] == 0 and not is_pinch_point(grid, row_num, col, n) for col in xrange(n)]
+            if any(possible_starts):
+                col = possible_starts.index(True)
                 row = row_num
                 break
+        else:
+            return False
+        
         grid[row][col] = i
         adjacent = []
+        #invalid = []
         for _ in xrange(n-1):
             if row != 0 and not grid[row-1][col] and (row-1, col) not in adjacent:
                 adjacent.append((row-1, col))
@@ -42,7 +61,18 @@ def tile_grid(n):
             if col != n-1 and not grid[row][col+1] and (row, col+1) not in adjacent:
                 adjacent.append((row, col+1))
             try:
-                row, col = random.choice(adjacent)
+                while True:
+                    row, col = random.choice(adjacent)
+                    if is_pinch_point(grid, row, col, n):
+                        # check size of connected components that are created
+                        # if any components have size < n and there are enough tiles left to fill it, then fill it
+                        # if any components have size < n and there are not enough tiles left to fill it, then
+                        # the square is invalid; try picking another one
+                        # if all components have size >= n, then continue
+                        #invalid.append[(row, col)]
+                        adjacent.remove((row, col))
+                        continue
+                    break
             except IndexError:
                 return False
             adjacent.remove((row, col))
@@ -197,7 +227,7 @@ def generate_grid(n):
         grid = tile_grid(n)
         if grid:
             break
-    rows = [tuple(Node(row_num, col_num, tile_num-1) for col_num, tile_num in enumerate(row))
+    rows = [tuple(Node(row_num, col_num, tile_num) for col_num, tile_num in enumerate(row))
             for row_num, row in enumerate(grid)]
     cols = list(zip(*rows))
     tiles = [[] for _ in xrange(n)]
@@ -207,7 +237,7 @@ def generate_grid(n):
     for row in rows + cols:
         for tile_num, run in groupby(row, key=lambda node_:node_.tile):
             run = list(run)
-            if len(run) > 1:
+            if len(run) > 2:
                 runs[tile_num].append(run)
     return fill_grid(rows, cols, tiles, runs, n)
 
@@ -249,21 +279,171 @@ def display_grid(grid):
         if row_num < n:
             print("{: ^3}".join([' |'[pipe] for pipe in pipes[row_num]]).format(*(node.value for node in grid[row_num])))
 
+
+def display_tiling(grid):
+    """Display a completed tiling."""
+    n = len(grid)
+    tiling = [[None]*(n+2)] + [[None] + [tile for tile in row] + [None] for row in grid] + [[None]*(n+2)]
+    pipes = [[False]*(n+1) for _ in xrange(n)]  # position of '|' characters
+    for row_num, row in enumerate(tiling[1:-1]):
+        i = 0
+        while i <= n:
+            if row[i] != row[i+1]:
+                pipes[row_num][i] = True
+            i += 1
+    pipes_cols = list(zip(*pipes))
+    tiling = list(zip(*tiling))
+    dashes = [[False]*(n+1) for _ in xrange(n)]  # position of "---" characters
+    for row_num, row in enumerate(tiling[1:-1]):
+        i = 0
+        while i <= n:
+            if row[i] != row[i+1]:
+                dashes[row_num][i] = True
+            i += 1
+    dashes = list(zip(*dashes))
+    crosses = [[' ']*(n+1) for _ in xrange(n+1)]  # position of "+" characters
+    for i in xrange(n+1):
+        for j in xrange(n+1):
+            adj_dashes = dashes[i][(j-1 if j else 0):j+1]
+            adj_pipes = pipes_cols[j][(i-1 if i else 0):i+1]
+            if True in adj_dashes and True in adj_pipes:
+                crosses[i][j] = '+'
+            elif True in adj_dashes:
+                crosses[i][j] = '-'
+            elif True in adj_pipes:
+                crosses[i][j] = '|'
+    print("")
+    for row_num in xrange(n+1):
+        print("{}".join(crosses[row_num]).format(*((' -'[dash])*3 for dash in dashes[row_num])))
+        if row_num < n:
+            print("   ".join([' |'[pipe] for pipe in pipes[row_num]]))
+
+
 try:
     n = int(sys.argv[1])
 except IndexError:
     n = int(raw_input("Enter a value for n: "))
-tries = 0
-start_time = time.time()
-while True:
-    tries += 1
-    grid = generate_grid(n)
-    if grid:
-        break
-    if tries % 1000 == 0:
-        print("{} tries".format(tries))
-time_taken = time.time() - start_time
-display_grid(grid)
-print("")
-print("{} tries".format(tries))
-print("Completed in {} seconds".format(int(time_taken)))
+
+if len(sys.argv) == 2:
+    tries = 0
+    start_time = time.time()
+    while True:
+        tries += 1
+        grid = generate_grid(n)
+        if grid:
+            break
+        if tries % 5000 == 0:
+            print("{} tries".format(tries))
+    time_taken = time.time() - start_time
+    display_grid(grid)
+    print("")
+    print("{} tries".format(tries))
+    print("Completed in {} seconds".format(int(time_taken)))
+
+elif sys.argv[2] == "-tile":
+    while True:
+        grid = tile_grid(n)
+        if grid:
+            break
+    display_tiling(grid)
+    print("")
+    
+elif sys.argv[2] == "-g":
+    try:
+        N = int(sys.argv[3])
+    except IndexError:
+        N = 1
+    attempts = []
+    start_time = time.time()
+    for _ in xrange(N):
+        tries = 0
+        while True:
+            tries += 1
+            grid = generate_grid(n)
+            if grid:
+                break
+        attempts.append(tries)
+    time_taken = time.time() - start_time
+    print("")
+    print(N, "attempts conducted")
+    print("Minimum number of tries:", min(attempts))
+    print("Maximum number of tries:", max(attempts))
+    print("Average number of tries:", sum(attempts)/N)
+    print("Completed in {:.5f} seconds".format(time_taken))
+    print("")
+
+elif sys.argv[2] == "-t":
+    try:
+        N = int(sys.argv[3])
+    except IndexError:
+        N = 100
+    attempts = []
+    start_time = time.time()
+    for _ in xrange(N):
+        tries = 0
+        while True:
+            tries += 1
+            grid = tile_grid(n)
+            if grid:
+                break
+        attempts.append(tries)
+    time_taken = time.time() - start_time
+    print("")
+    print(N, "attempts conducted")
+    print("Minimum number of tries:", min(attempts))
+    print("Maximum number of tries:", max(attempts))
+    print("Average number of tries:", sum(attempts)/N)
+    print("Completed in {:.5f} seconds".format(time_taken))
+    print("")
+
+
+# deprecated code
+def tile_grid_depr(n):
+    """Try to generate a random tiling of an n-by-n square using n n-ominoes.
+    Return False if the generation fails."""
+    grid = [[0]*n for _ in xrange(n)]
+    for i in xrange(1, n+1):
+        for row_num, row in enumerate(grid):
+            if 0 in row:
+                col = row.index(0)
+                row = row_num
+                break
+        grid[row][col] = i
+        adjacent = []
+        for _ in xrange(n-1):
+            if row != 0 and not grid[row-1][col] and (row-1, col) not in adjacent:
+                adjacent.append((row-1, col))
+            if row != n-1 and not grid[row+1][col] and (row+1, col) not in adjacent:
+                adjacent.append((row+1, col))
+            if col != 0 and not grid[row][col-1] and (row, col-1) not in adjacent:
+                adjacent.append((row, col-1))
+            if col != n-1 and not grid[row][col+1] and (row, col+1) not in adjacent:
+                adjacent.append((row, col+1))
+            try:
+                row, col = random.choice(adjacent)
+            except IndexError:
+                return False
+            adjacent.remove((row, col))
+            grid[row][col] = i
+    return grid
+
+
+def generate_grid_depr(n):
+    """Try to fill a random tiling of an n-by-n square using n n-ominoes."""
+    while True:
+        grid = tile_grid(n)
+        if grid:
+            break
+    rows = [tuple(Node(row_num, col_num, tile_num-1) for col_num, tile_num in enumerate(row))
+            for row_num, row in enumerate(grid)]
+    cols = list(zip(*rows))
+    tiles = [[] for _ in xrange(n)]
+    for node in sum(rows, ()):
+        tiles[node.tile].append(node)
+    runs = [[] for _ in xrange(n)]
+    for row in rows + cols:
+        for tile_num, run in groupby(row, key=lambda node_:node_.tile):
+            run = list(run)
+            if len(run) > 2:
+                runs[tile_num].append(run)
+    return fill_grid(rows, cols, tiles, runs, n)
