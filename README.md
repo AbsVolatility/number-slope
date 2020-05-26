@@ -7,7 +7,7 @@ The program can takes an argument *n*, which gives the size of the grid. E.g. on
 
 in the command window to get a 6x6 grid. If you don't provide an argument when you run the program, it will prompt you for a value for *n*.
 
-The program will output a random, completed *n*-by-*n* grid as soon as it finds one. It will also give an update every 5000 tries, until it finds a solution or you force-quit the program.
+The program will output a random, completed *n*-by-*n* grid as soon as it finds one. It will also give an update every 500 tries, until it finds a solution or you force-quit the program.
 
 Example output for *n* = 6:
 

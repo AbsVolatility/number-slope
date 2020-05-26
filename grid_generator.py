@@ -50,7 +50,6 @@ def tile_grid(n):
         
         grid[row][col] = i
         adjacent = []
-        #invalid = []
         for _ in xrange(n-1):
             if row != 0 and not grid[row-1][col] and (row-1, col) not in adjacent:
                 adjacent.append((row-1, col))
@@ -61,21 +60,14 @@ def tile_grid(n):
             if col != n-1 and not grid[row][col+1] and (row, col+1) not in adjacent:
                 adjacent.append((row, col+1))
             try:
+                random.shuffle(adjacent)
                 while True:
-                    row, col = random.choice(adjacent)
+                    row, col = adjacent.pop()
                     if is_pinch_point(grid, row, col, n):
-                        # check size of connected components that are created
-                        # if any components have size < n and there are enough tiles left to fill it, then fill it
-                        # if any components have size < n and there are not enough tiles left to fill it, then
-                        # the square is invalid; try picking another one
-                        # if all components have size >= n, then continue
-                        #invalid.append[(row, col)]
-                        adjacent.remove((row, col))
                         continue
                     break
             except IndexError:
                 return False
-            adjacent.remove((row, col))
             grid[row][col] = i
     return grid
 
@@ -218,6 +210,10 @@ def fill_grid(rows, cols, tiles, runs, n):
                     guess.value = i
                     num_filled += 1
                     moves.append(guess)
+                    if num_filled == n:
+                        i += 1
+                        num_filled = 0
+                    break
     return rows
 
 
@@ -240,6 +236,7 @@ def generate_grid(n):
             if len(run) > 2:
                 runs[tile_num].append(run)
     return fill_grid(rows, cols, tiles, runs, n)
+
 
 def display_grid(grid):
     """Display a completed grid."""
@@ -332,7 +329,7 @@ if len(sys.argv) == 2:
         grid = generate_grid(n)
         if grid:
             break
-        if tries % 5000 == 0:
+        if tries % 500 == 0:
             print("{} tries".format(tries))
     time_taken = time.time() - start_time
     display_grid(grid)
